@@ -605,8 +605,8 @@ ${measureLine}
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': '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', '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
+      'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      　body: JSON.stringify({
         model: 'claude-sonnet-4-20250514', max_tokens: 1200,
         messages: [{ role: 'user', content: [...imageContents, { type: 'text', text: prompt }] }]
       })
