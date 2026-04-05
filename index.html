@@ -936,14 +936,27 @@
             if (!p) return;
             const remaining = 5 - p.images.length;
             const toAdd = Array.from(files).slice(0, remaining);
+            const supported = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             let loaded = 0;
+            let total = 0;
             toAdd.forEach(file => {
                 if (!file.type.startsWith('image/')) return;
+                total++;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    p.images.push({ base64: e.target.result, type: file.type });
-                    loaded++;
-                    if (loaded === toAdd.length) renderPreview(id);
+                    const img = new Image();
+                    img.onload = () => {
+                        // Canvas で PNG に変換（HEIC等の非対応形式に対応）
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+                        p.images.push({ base64, type: 'image/jpeg' });
+                        loaded++;
+                        if (loaded === total) renderPreview(id);
+                    };
+                    img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             });
