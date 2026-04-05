@@ -1,571 +1,1044 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>メルカリ出品アシスタント</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
-  :root {
-    --bg:#0d0d0f; --surface:#16181c; --surface2:#1e2128; --border:#2a2d35;
-    --accent:#ff4d4d; --accent2:#ff8c42; --text:#f0f0f0; --muted:#777;
-    --success:#3ddc84; --warning:#ffd166;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { background:var(--bg); color:var(--text); font-family:'Noto Sans JP',sans-serif; min-height:100vh; padding:0 0 80px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メルカリ出品アシスタント</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
 
-  header {
-    background:linear-gradient(135deg,#1a0a0a 0%,#0d0d0f 60%);
-    border-bottom:1px solid var(--border); padding:16px 20px;
-    display:flex; align-items:center; justify-content:space-between;
-    position:sticky; top:0; z-index:100; backdrop-filter:blur(10px);
-  }
-  header h1 { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .badge { background:var(--accent); color:white; font-size:9px; font-weight:700; padding:2px 6px; border-radius:20px; letter-spacing:1px; }
+        :root {
+            --bg:#0d0d0f;
+            --surface:#16181c;
+            --surface2:#1e2128;
+            --border:#2a2d35;
+            --accent:#ff4d4d;
+            --accent2:#ff8c42;
+            --text:#f0f0f0;
+            --muted:#777;
+            --success:#3ddc84;
+            --warning:#ffd166;
+        }
 
-  .tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); }
-  .tab-btn { flex:1; padding:13px 0; font-family:'Noto Sans JP',sans-serif; font-size:13px; font-weight:500; color:var(--muted); background:transparent; border:none; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
-  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-  .tab-panel { display:none; }
-  .tab-panel.active { display:flex; flex-direction:column; }
+        * { box-sizing:border-box; margin:0; padding:0; }
 
-  .main { max-width:680px; margin:0 auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px; }
+        body {
+            background:var(--bg);
+            color:var(--text);
+            font-family:'Noto Sans JP',sans-serif;
+            min-height:100vh;
+            padding:0 0 80px;
+        }
 
-  /* ===== 商品カード ===== */
-  .product-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;
-    transition:border-color 0.2s;
-  }
-  .product-card.generating { border-color:var(--accent2); }
-  .product-card.done { border-color:var(--success); }
+        header {
+            background:linear-gradient(135deg,#1a0a0a 0%,#0d0d0f 60%);
+            border-bottom:1px solid var(--border);
+            padding:16px 20px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            position:sticky;
+            top:0;
+            z-index:100;
+            backdrop-filter:blur(10px);
+        }
 
-  .card-header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 14px; background:var(--surface2); border-bottom:1px solid var(--border);
-    cursor:pointer; user-select:none;
-  }
-  .card-header-left { display:flex; align-items:center; gap:10px; }
-  .card-num { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--accent); letter-spacing:1px; width:28px; }
-  .card-title-preview { font-size:13px; font-weight:500; color:var(--text); }
-  .card-title-preview.empty { color:var(--muted); }
-  .card-header-right { display:flex; align-items:center; gap:8px; }
-  .card-status { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:1px; }
-  .card-status.idle { background:var(--surface); color:var(--muted); border:1px solid var(--border); }
-  .card-status.gen { background:rgba(255,140,66,0.15); color:var(--accent2); border:1px solid rgba(255,140,66,0.3); }
-  .card-status.ok { background:rgba(61,220,132,0.12); color:var(--success); border:1px solid rgba(61,220,132,0.3); }
-  .card-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; }
-  .card-chevron.open { transform:rotate(180deg); }
-  .delete-card-btn { background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 4px; line-height:1; }
-  .delete-card-btn:hover { color:var(--accent); }
+        header h1 {
+            font-family:'Bebas Neue',sans-serif;
+            font-size:24px;
+            letter-spacing:2px;
+            background:linear-gradient(90deg,var(--accent),var(--accent2));
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+        }
 
-  .card-body { padding:14px; display:flex; flex-direction:column; gap:12px; }
-  .card-body.collapsed { display:none; }
+        .badge {
+            background:var(--accent);
+            color:white;
+            font-size:9px;
+            font-weight:700;
+            padding:2px 6px;
+            border-radius:20px;
+            letter-spacing:1px;
+        }
 
-  /* Upload mini */
-  .upload-mini {
-    border:2px dashed var(--border); border-radius:12px; padding:16px 14px;
-    text-align:center; cursor:pointer; transition:all 0.2s; background:var(--bg);
-    position:relative;
-  }
-  .upload-mini:hover { border-color:var(--accent); }
-  .upload-mini p { color:var(--muted); font-size:12px; }
-  .upload-mini strong { color:var(--accent); }
+        .tabs {
+            display:flex;
+            border-bottom:1px solid var(--border);
+            background:var(--surface);
+        }
 
-  .preview-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-top:10px; }
-  .preview-item { aspect-ratio:1; border-radius:7px; overflow:hidden; position:relative; border:1px solid var(--border); }
-  .preview-item img { width:100%; height:100%; object-fit:cover; }
-  .remove-btn { position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.75); border:none; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .tab-btn {
+            flex:1;
+            padding:13px 0;
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:13px;
+            font-weight:500;
+            color:var(--muted);
+            background:transparent;
+            border:none;
+            cursor:pointer;
+            border-bottom:2px solid transparent;
+            transition:all 0.2s;
+        }
 
-  /* Form mini */
-  .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-  .fg { display:flex; flex-direction:column; gap:4px; }
-  .fg label { font-size:10px; color:var(--muted); font-weight:500; }
-  select, input[type="text"], input[type="number"] {
-    background:var(--surface2); border:1px solid var(--border); border-radius:8px;
-    color:var(--text); font-family:'Noto Sans JP',sans-serif; font-size:13px;
-    padding:8px 10px; width:100%; transition:border-color 0.2s; -webkit-appearance:none;
-  }
-  select:focus, input:focus { outline:none; border-color:var(--accent); }
-  select option { background:var(--surface2); }
-  .price-wrap { position:relative; }
-  .price-wrap span { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:12px; pointer-events:none; }
-  .price-wrap input { padding-left:22px; }
+        .tab-btn.active {
+            color:var(--accent);
+            border-bottom-color:var(--accent);
+        }
 
-  /* Result area inside card */
-  .result-area { background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; animation:fadeIn 0.3s ease; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  .result-row { padding:10px 12px; border-bottom:1px solid var(--border); }
-  .result-row:last-child { border-bottom:none; }
-  .result-row-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-  .result-label { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--accent); text-transform:uppercase; }
-  .result-value { font-size:13px; line-height:1.8; color:var(--text); white-space:pre-wrap; word-break:break-word; }
-  .char-count { font-size:10px; color:var(--muted); }
-  .char-count.over { color:var(--accent); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:flex; flex-direction:column; }
 
-  .copy-xs { background:transparent; border:1px solid var(--border); border-radius:5px; color:var(--muted); font-family:'Noto Sans JP',sans-serif; font-size:10px; padding:3px 8px; cursor:pointer; transition:all 0.15s; }
-  .copy-xs:hover { border-color:var(--accent); color:var(--text); }
-  .copy-xs.copied { border-color:var(--success); color:var(--success); }
+        .main {
+            max-width:680px;
+            margin:0 auto;
+            padding:20px 16px;
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        }
 
-  .hashtag-wrap { display:flex; flex-wrap:wrap; gap:5px; }
-  .tag-pill { background:rgba(255,77,77,0.1); border:1px solid rgba(255,77,77,0.2); border-radius:20px; padding:3px 9px; font-size:11px; color:#ff9090; }
+        .product-card {
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:16px;
+            overflow:hidden;
+            transition:border-color 0.2s;
+        }
 
-  /* Bottom action row per card */
-  .card-actions { display:flex; gap:8px; }
-  .copy-all-xs { flex:1; padding:10px; background:transparent; border:1px solid var(--accent); border-radius:8px; color:var(--accent); font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:500; cursor:pointer; transition:all 0.15s; }
-  .copy-all-xs:hover { background:rgba(255,77,77,0.08); }
-  .sheets-xs { flex:1; padding:10px; background:rgba(61,220,132,0.08); border:1px solid rgba(61,220,132,0.3); border-radius:8px; color:var(--success); font-family:'Noto Sans JP',sans-serif; font-size:12px; font-weight:500; cursor:pointer; transition:all 0.15s; }
-  .sheets-xs:hover { background:rgba(61,220,132,0.15); }
-  .sheets-xs:disabled { opacity:0.4; cursor:not-allowed; }
+        .product-card.generating { border-color:var(--accent2); }
+        .product-card.done { border-color:var(--success); }
 
-  /* Generating spinner inside card */
-  .gen-spinner { display:flex; align-items:center; gap:10px; padding:14px; color:var(--muted); font-size:13px; }
-  .spin { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent2); border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
-  @keyframes spin { to{transform:rotate(360deg)} }
+        .card-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:12px 14px;
+            background:var(--surface2);
+            border-bottom:1px solid var(--border);
+            cursor:pointer;
+            user-select:none;
+        }
 
-  /* Add product btn */
-  .add-product-btn {
-    width:100%; padding:14px; background:transparent; border:2px dashed var(--border);
-    border-radius:14px; color:var(--muted); font-family:'Noto Sans JP',sans-serif;
-    font-size:14px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;
-  }
-  .add-product-btn:hover { border-color:var(--accent); color:var(--accent); }
+        .card-header-left { display:flex; align-items:center; gap:10px; }
 
-  /* Bulk generate btn */
-  .bulk-btn {
-    width:100%; padding:15px; background:linear-gradient(135deg,var(--accent),var(--accent2));
-    border:none; border-radius:12px; color:white; font-family:'Bebas Neue',sans-serif;
-    font-size:20px; letter-spacing:3px; cursor:pointer; transition:all 0.2s;
-    display:flex; align-items:center; justify-content:center; gap:10px;
-  }
-  .bulk-btn:hover { transform:translateY(-1px); filter:brightness(1.1); }
-  .bulk-btn:active { transform:translateY(0); }
-  .bulk-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; filter:none; }
+        .card-num {
+            font-family:'Bebas Neue',sans-serif;
+            font-size:18px;
+            color:var(--accent);
+            letter-spacing:1px;
+            width:28px;
+        }
 
-  .error-msg { background:rgba(255,77,77,0.1); border:1px solid rgba(255,77,77,0.3); border-radius:10px; padding:10px 14px; font-size:13px; color:#ff8080; display:none; }
+        .card-title-preview { font-size:13px; font-weight:500; color:var(--text); }
+        .card-title-preview.empty { color:var(--muted); }
 
-  /* Progress bar */
-  .progress-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:none; }
-  .progress-label { font-size:12px; color:var(--muted); margin-bottom:8px; }
-  .progress-bar-bg { background:var(--surface2); border-radius:20px; height:6px; overflow:hidden; }
-  .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:20px; transition:width 0.4s ease; width:0%; }
+        .card-header-right { display:flex; align-items:center; gap:8px; }
 
-  /* ===== 売上管理タブ ===== */
-  .listing-list { display:flex; flex-direction:column; gap:12px; }
-  .listing-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
-  .lc-header { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--surface2); border-bottom:1px solid var(--border); gap:8px; }
-  .lc-title { font-size:13px; font-weight:500; flex:1; line-height:1.4; }
-  .status-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:1px; white-space:nowrap; }
-  .status-selling { background:rgba(255,209,102,0.15); color:var(--warning); border:1px solid rgba(255,209,102,0.3); }
-  .status-sold { background:rgba(61,220,132,0.12); color:var(--success); border:1px solid rgba(61,220,132,0.3); }
-  .lc-body { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
-  .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-  .ic { display:flex; flex-direction:column; gap:3px; }
-  .ic-label { font-size:10px; color:var(--muted); }
-  .ic-value { font-size:14px; font-weight:500; }
-  .ic-value.pos { color:var(--success); }
-  .ic-value.neg { color:var(--accent); }
-  .sold-section { border-top:1px solid var(--border); padding-top:10px; }
-  .sold-title { font-size:10px; color:var(--muted); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
-  .sold-row { display:flex; gap:8px; align-items:flex-end; }
-  .sold-input-w { flex:1; display:flex; flex-direction:column; gap:4px; }
-  .sold-input-w label { font-size:11px; color:var(--muted); }
-  .sold-btn { background:var(--success); border:none; border-radius:8px; color:#0d0d0f; font-family:'Noto Sans JP',sans-serif; font-size:13px; font-weight:700; padding:10px 14px; cursor:pointer; white-space:nowrap; }
-  .sold-btn:hover { filter:brightness(1.1); }
-  .sold-result-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
-  .empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-size:14px; line-height:2; }
-  .empty-icon { font-size:40px; margin-bottom:10px; display:block; }
+        .card-status {
+            font-size:10px;
+            font-weight:700;
+            padding:2px 8px;
+            border-radius:20px;
+            letter-spacing:1px;
+        }
 
-  /* Settings */
-  .section-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; }
-  .section-title { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:12px; }
-  .gas-banner { background:rgba(255,209,102,0.07); border:1px solid rgba(255,209,102,0.25); border-radius:12px; padding:12px 14px; font-size:12px; color:var(--warning); display:flex; align-items:flex-start; gap:10px; }
-  .gas-url-row { display:flex; gap:8px; margin-top:8px; }
-  .gas-url-input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:7px; color:var(--text); font-family:'Noto Sans JP',sans-serif; font-size:12px; padding:7px 10px; }
-  .gas-url-input:focus { outline:none; border-color:var(--warning); }
-  .gas-save-btn { background:rgba(255,209,102,0.15); border:1px solid rgba(255,209,102,0.3); border-radius:7px; color:var(--warning); font-family:'Noto Sans JP',sans-serif; font-size:12px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
-</style>
+        .card-status.idle {
+            background:var(--surface);
+            color:var(--muted);
+            border:1px solid var(--border);
+        }
+
+        .card-status.gen {
+            background:rgba(255,140,66,0.15);
+            color:var(--accent2);
+            border:1px solid rgba(255,140,66,0.3);
+        }
+
+        .card-status.ok {
+            background:rgba(61,220,132,0.12);
+            color:var(--success);
+            border:1px solid rgba(61,220,132,0.3);
+        }
+
+        .card-chevron { font-size:12px; color:var(--muted); transition:transform 0.2s; }
+        .card-chevron.open { transform:rotate(180deg); }
+
+        .delete-card-btn {
+            background:transparent;
+            border:none;
+            color:var(--muted);
+            font-size:14px;
+            cursor:pointer;
+            padding:2px 4px;
+            line-height:1;
+        }
+        .delete-card-btn:hover { color:var(--accent); }
+
+        .card-body { padding:14px; display:flex; flex-direction:column; gap:12px; }
+        .card-body.collapsed { display:none; }
+
+        .upload-mini {
+            border:2px dashed var(--border);
+            border-radius:12px;
+            padding:16px 14px;
+            text-align:center;
+            cursor:pointer;
+            transition:all 0.2s;
+            background:var(--bg);
+            position:relative;
+        }
+        .upload-mini:hover { border-color:var(--accent); }
+        .upload-mini p { color:var(--muted); font-size:12px; }
+        .upload-mini strong { color:var(--accent); }
+
+        .preview-grid {
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:6px;
+            margin-top:10px;
+        }
+
+        .preview-item {
+            aspect-ratio:1;
+            border-radius:7px;
+            overflow:hidden;
+            position:relative;
+            border:1px solid var(--border);
+        }
+        .preview-item img { width:100%; height:100%; object-fit:cover; }
+
+        .remove-btn {
+            position:absolute;
+            top:2px;
+            right:2px;
+            background:rgba(0,0,0,0.75);
+            border:none;
+            color:white;
+            border-radius:50%;
+            width:18px;
+            height:18px;
+            font-size:10px;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+        .fg { display:flex; flex-direction:column; gap:4px; }
+        .fg label { font-size:10px; color:var(--muted); font-weight:500; }
+
+        select, input[type="text"], input[type="number"], input[type="password"] {
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:8px;
+            color:var(--text);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:13px;
+            padding:8px 10px;
+            width:100%;
+            transition:border-color 0.2s;
+            -webkit-appearance:none;
+        }
+
+        select:focus, input:focus { outline:none; border-color:var(--accent); }
+        select option { background:var(--surface2); }
+
+        .price-wrap { position:relative; }
+        .price-wrap span {
+            position:absolute;
+            left:10px;
+            top:50%;
+            transform:translateY(-50%);
+            color:var(--muted);
+            font-size:12px;
+            pointer-events:none;
+        }
+        .price-wrap input { padding-left:22px; }
+
+        .result-area {
+            background:var(--bg);
+            border:1px solid var(--border);
+            border-radius:10px;
+            overflow:hidden;
+            animation:fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from{opacity:0;transform:translateY(6px)}
+            to{opacity:1;transform:translateY(0)}
+        }
+
+        .result-row { padding:10px 12px; border-bottom:1px solid var(--border); }
+        .result-row:last-child { border-bottom:none; }
+
+        .result-row-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:6px;
+        }
+
+        .result-label {
+            font-size:9px;
+            font-weight:700;
+            letter-spacing:2px;
+            color:var(--accent);
+            text-transform:uppercase;
+        }
+
+        .result-value {
+            font-size:13px;
+            line-height:1.8;
+            color:var(--text);
+            white-space:pre-wrap;
+            word-break:break-word;
+        }
+
+        .char-count { font-size:10px; color:var(--muted); }
+        .char-count.over { color:var(--accent); }
+
+        .copy-xs {
+            background:transparent;
+            border:1px solid var(--border);
+            border-radius:5px;
+            color:var(--muted);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:10px;
+            padding:3px 8px;
+            cursor:pointer;
+            transition:all 0.15s;
+        }
+        .copy-xs:hover { border-color:var(--accent); color:var(--text); }
+        .copy-xs.copied { border-color:var(--success); color:var(--success); }
+
+        .hashtag-wrap { display:flex; flex-wrap:wrap; gap:5px; }
+
+        .tag-pill {
+            background:rgba(255,77,77,0.1);
+            border:1px solid rgba(255,77,77,0.2);
+            border-radius:20px;
+            padding:3px 9px;
+            font-size:11px;
+            color:#ff9090;
+        }
+
+        .card-actions { display:flex; gap:8px; }
+
+        .copy-all-xs {
+            flex:1;
+            padding:10px;
+            background:transparent;
+            border:1px solid var(--accent);
+            border-radius:8px;
+            color:var(--accent);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            font-weight:500;
+            cursor:pointer;
+            transition:all 0.15s;
+        }
+        .copy-all-xs:hover { background:rgba(255,77,77,0.08); }
+
+        .sheets-xs {
+            flex:1;
+            padding:10px;
+            background:rgba(61,220,132,0.08);
+            border:1px solid rgba(61,220,132,0.3);
+            border-radius:8px;
+            color:var(--success);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            font-weight:500;
+            cursor:pointer;
+            transition:all 0.15s;
+        }
+        .sheets-xs:hover { background:rgba(61,220,132,0.15); }
+        .sheets-xs:disabled { opacity:0.4; cursor:not-allowed; }
+
+        .gen-spinner {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:14px;
+            color:var(--muted);
+            font-size:13px;
+        }
+
+        .spin {
+            width:16px;
+            height:16px;
+            border:2px solid var(--border);
+            border-top-color:var(--accent2);
+            border-radius:50%;
+            animation:spin 0.7s linear infinite;
+            flex-shrink:0;
+        }
+
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        .add-product-btn {
+            width:100%;
+            padding:14px;
+            background:transparent;
+            border:2px dashed var(--border);
+            border-radius:14px;
+            color:var(--muted);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:14px;
+            cursor:pointer;
+            transition:all 0.2s;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+        }
+        .add-product-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+        .bulk-btn {
+            width:100%;
+            padding:15px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            border:none;
+            border-radius:12px;
+            color:white;
+            font-family:'Bebas Neue',sans-serif;
+            font-size:20px;
+            letter-spacing:3px;
+            cursor:pointer;
+            transition:all 0.2s;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+        }
+        .bulk-btn:hover { transform:translateY(-1px); filter:brightness(1.1); }
+        .bulk-btn:active { transform:translateY(0); }
+        .bulk-btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; filter:none; }
+
+        .error-msg {
+            background:rgba(255,77,77,0.1);
+            border:1px solid rgba(255,77,77,0.3);
+            border-radius:10px;
+            padding:10px 14px;
+            font-size:13px;
+            color:#ff8080;
+            display:none;
+        }
+
+        .progress-wrap {
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:10px;
+            padding:12px 14px;
+            display:none;
+        }
+
+        .progress-label { font-size:12px; color:var(--muted); margin-bottom:8px; }
+
+        .progress-bar-bg {
+            background:var(--surface2);
+            border-radius:20px;
+            height:6px;
+            overflow:hidden;
+        }
+
+        .progress-bar-fill {
+            height:100%;
+            background:linear-gradient(90deg,var(--accent),var(--accent2));
+            border-radius:20px;
+            transition:width 0.4s ease;
+            width:0%;
+        }
+
+        .listing-list { display:flex; flex-direction:column; gap:12px; }
+
+        .listing-card {
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:14px;
+            overflow:hidden;
+        }
+
+        .lc-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:11px 14px;
+            background:var(--surface2);
+            border-bottom:1px solid var(--border);
+            gap:8px;
+        }
+
+        .lc-title { font-size:13px; font-weight:500; flex:1; line-height:1.4; }
+
+        .status-badge {
+            font-size:10px;
+            font-weight:700;
+            padding:3px 9px;
+            border-radius:20px;
+            letter-spacing:1px;
+            white-space:nowrap;
+        }
+
+        .status-selling {
+            background:rgba(255,209,102,0.15);
+            color:var(--warning);
+            border:1px solid rgba(255,209,102,0.3);
+        }
+
+        .status-sold {
+            background:rgba(61,220,132,0.12);
+            color:var(--success);
+            border:1px solid rgba(61,220,132,0.3);
+        }
+
+        .lc-body { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+
+        .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+
+        .ic { display:flex; flex-direction:column; gap:3px; }
+        .ic-label { font-size:10px; color:var(--muted); }
+        .ic-value { font-size:14px; font-weight:500; }
+        .ic-value.pos { color:var(--success); }
+        .ic-value.neg { color:var(--accent); }
+
+        .sold-section { border-top:1px solid var(--border); padding-top:10px; }
+
+        .sold-title {
+            font-size:10px;
+            color:var(--muted);
+            font-weight:700;
+            letter-spacing:1px;
+            text-transform:uppercase;
+            margin-bottom:8px;
+        }
+
+        .sold-row { display:flex; gap:8px; align-items:flex-end; }
+
+        .sold-input-w { flex:1; display:flex; flex-direction:column; gap:4px; }
+        .sold-input-w label { font-size:11px; color:var(--muted); }
+
+        .sold-btn {
+            background:var(--success);
+            border:none;
+            border-radius:8px;
+            color:#0d0d0f;
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:13px;
+            font-weight:700;
+            padding:10px 14px;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+        .sold-btn:hover { filter:brightness(1.1); }
+
+        .sold-result-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+
+        .empty-state {
+            text-align:center;
+            padding:40px 20px;
+            color:var(--muted);
+            font-size:14px;
+            line-height:2;
+        }
+
+        .empty-icon { font-size:40px; margin-bottom:10px; display:block; }
+
+        .section-card {
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:16px;
+            padding:16px;
+        }
+
+        .section-title {
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:2px;
+            color:var(--muted);
+            text-transform:uppercase;
+            margin-bottom:12px;
+        }
+
+        .info-banner {
+            background:rgba(255,209,102,0.07);
+            border:1px solid rgba(255,209,102,0.25);
+            border-radius:12px;
+            padding:12px 14px;
+            font-size:12px;
+            color:var(--warning);
+            display:flex;
+            align-items:flex-start;
+            gap:10px;
+            margin-bottom:10px;
+        }
+
+        .api-key-row {
+            display:flex;
+            gap:8px;
+            margin-top:8px;
+        }
+
+        .api-key-input {
+            flex:1;
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:7px;
+            color:var(--text);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            padding:7px 10px;
+        }
+        .api-key-input:focus { outline:none; border-color:var(--accent); }
+
+        .gas-url-row { display:flex; gap:8px; margin-top:8px; }
+
+        .gas-url-input {
+            flex:1;
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:7px;
+            color:var(--text);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            padding:7px 10px;
+        }
+        .gas-url-input:focus { outline:none; border-color:var(--warning); }
+
+        .save-btn {
+            background:rgba(255,77,77,0.15);
+            border:1px solid rgba(255,77,77,0.3);
+            border-radius:7px;
+            color:var(--accent);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            padding:7px 12px;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+
+        .gas-save-btn {
+            background:rgba(255,209,102,0.15);
+            border:1px solid rgba(255,209,102,0.3);
+            border-radius:7px;
+            color:var(--warning);
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:12px;
+            padding:7px 12px;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <h1>MERCARI LISTER</h1>
+        <span class="badge">AI</span>
+    </header>
 
-<header>
-  <h1>MERCARI LISTER</h1>
-  <span class="badge">AI</span>
-</header>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('listing', this)">📦 出品する</button>
+        <button class="tab-btn" onclick="switchTab('sales', this)">📊 売上管理</button>
+        <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ 設定</button>
+    </div>
 
-<div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('listing', this)">📦 出品する</button>
-  <button class="tab-btn" onclick="switchTab('sales', this)">📊 売上管理</button>
-  <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ 設定</button>
-</div>
+    <div id="tab-listing" class="tab-panel active">
+        <div class="main">
+            <button class="add-product-btn" onclick="addProduct()">
+                ＋ 商品を追加
+            </button>
 
-<!-- ===== 出品タブ ===== -->
-<div id="tab-listing" class="tab-panel active">
-<div class="main">
+            <div id="errorMsg" class="error-msg"></div>
 
-  <div id="productList"></div>
+            <div id="productList"></div>
 
-  <button class="add-product-btn" onclick="addProduct()">＋ 商品を追加</button>
+            <div id="progressWrap" class="progress-wrap">
+                <div class="progress-label" id="progressLabel">生成中...</div>
+                <div class="progress-bar-bg">
+                    <div id="progressFill" class="progress-bar-fill"></div>
+                </div>
+            </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label" id="progressLabel">生成中...</div>
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-  </div>
-
-  <div class="error-msg" id="errorMsg"></div>
-
-  <button class="bulk-btn" id="bulkBtn" onclick="generateAll()">
-    <span id="bulkBtnText">✦ 全商品の出品文を一括生成</span>
-  </button>
-
-</div>
-</div>
-
-<!-- ===== 売上管理タブ ===== -->
-<div id="tab-sales" class="tab-panel">
-<div class="main">
-  <div id="listingList" class="listing-list"></div>
-</div>
-</div>
-
-<!-- ===== 設定タブ ===== -->
-<div id="tab-settings" class="tab-panel">
-<div class="main">
-  <div class="section-card">
-    <div class="section-title">Google スプレッドシート連携</div>
-    <div class="gas-banner">
-      <span style="font-size:16px;flex-shrink:0">📋</span>
-      <div style="flex:1">
-        <div style="font-weight:700;margin-bottom:4px;">GAS ウェブアプリURLを設定</div>
-        <div style="color:#aaa;font-size:11px;line-height:1.6;">セットアップ手順書を参照してURLを取得し、下に貼り付けてください。</div>
-        <div class="gas-url-row">
-          <input class="gas-url-input" id="gasUrlInput" type="text" placeholder="https://script.google.com/macros/s/...">
-          <button class="gas-save-btn" onclick="saveGasUrl()">保存</button>
+            <button id="bulkBtn" class="bulk-btn" onclick="generateAll()">
+                <span id="bulkBtnText">✦ 全商品の出品文を一括生成</span>
+            </button>
         </div>
-        <div id="gasUrlStatus" style="font-size:11px;margin-top:6px;color:#aaa;"></div>
-      </div>
-    </div>
-  </div>
-  <div class="section-card">
-    <div class="section-title">データ管理</div>
-    <div style="color:var(--muted);font-size:12px;line-height:1.7;margin-bottom:10px;">ローカルに保存されている売上データをすべて削除します。スプレッドシートのデータは消えません。</div>
-    <button onclick="clearAllData()" style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.3);border-radius:8px;color:#ff8080;font-family:'Noto Sans JP',sans-serif;font-size:13px;padding:10px;cursor:pointer;width:100%;">ローカルデータをすべて削除</button>
-  </div>
-</div>
-</div>
-
-<script>
-// ===== State =====
-let products = [];   // [{id, images, fields, result}]
-let listings = JSON.parse(localStorage.getItem('mercari_listings') || '[]');
-let gasUrl = localStorage.getItem('mercari_gas_url') || '';
-let productCounter = 0;
-
-// Init
-document.addEventListener('DOMContentLoaded', () => {
-  if (gasUrl) document.getElementById('gasUrlInput').value = gasUrl;
-  addProduct(); // 最初の1枚
-  renderSalesList();
-});
-
-// ===== Tabs =====
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  btn.classList.add('active');
-  if (tab === 'sales') renderSalesList();
-}
-
-// ===== Product管理 =====
-function addProduct() {
-  productCounter++;
-  const id = 'p' + Date.now();
-  products.push({ id, images: [], result: null });
-  renderProductList();
-  // 追加した商品を少し遅れてスクロール
-  setTimeout(() => {
-    const el = document.getElementById('card-' + id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 100);
-}
-
-function removeProduct(id) {
-  if (products.length <= 1) { alert('最低1商品は必要です'); return; }
-  products = products.filter(p => p.id !== id);
-  renderProductList();
-}
-
-function toggleCard(id) {
-  const body = document.getElementById('body-' + id);
-  const chev = document.getElementById('chev-' + id);
-  const isCollapsed = body.classList.contains('collapsed');
-  body.classList.toggle('collapsed', !isCollapsed);
-  chev.classList.toggle('open', isCollapsed);
-}
-
-function renderProductList() {
-  const container = document.getElementById('productList');
-  container.innerHTML = '';
-  products.forEach((p, idx) => {
-    const div = document.createElement('div');
-    div.id = 'card-' + p.id;
-    div.className = 'product-card' + (p.result ? ' done' : '');
-    div.innerHTML = productCardHTML(p, idx);
-    container.appendChild(div);
-  });
-}
-
-function productCardHTML(p, idx) {
-  const titlePreview = p.result ? p.result.title : '未生成';
-  const isEmpty = !p.result;
-  const statusClass = p.result ? 'ok' : 'idle';
-  const statusLabel = p.result ? '生成済' : '未生成';
-
-  return `
-  <div class="card-header" onclick="toggleCard('${p.id}')">
-    <div class="card-header-left">
-      <div class="card-num">#${idx+1}</div>
-      <div class="card-title-preview ${isEmpty ? 'empty' : ''}">${titlePreview}</div>
-    </div>
-    <div class="card-header-right">
-      <span class="card-status ${statusClass}">${statusLabel}</span>
-      <span class="card-chevron open" id="chev-${p.id}">▼</span>
-      <button class="delete-card-btn" onclick="event.stopPropagation();removeProduct('${p.id}')">✕</button>
-    </div>
-  </div>
-  <div class="card-body" id="body-${p.id}">
-    <!-- 写真 -->
-    <div class="upload-mini" id="upload-${p.id}" onclick="triggerUpload('${p.id}')">
-      <p><strong>タップして写真を追加</strong>（最大5枚）</p>
-      <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="handleFiles('${p.id}', this.files)">
-      <div class="preview-grid" id="preview-${p.id}"></div>
     </div>
 
-    <!-- 基本情報 -->
-    <div class="form-grid-2">
-      <div class="fg">
-        <label>カテゴリ</label>
-        <select id="cat-${p.id}">
-          <option value="メンズトップス">メンズトップス</option>
-          <option value="メンズボトムス">メンズボトムス</option>
-          <option value="ジャージ上下セット">ジャージ上下セット</option>
-          <option value="ジャージ上">ジャージ上</option>
-          <option value="ジャージ下">ジャージ下</option>
-          <option value="アウター">アウター</option>
-          <option value="スウェット">スウェット</option>
-          <option value="Tシャツ">Tシャツ</option>
-          <option value="パーカー">パーカー</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>コンディション</label>
-        <select id="cond-${p.id}">
-          <option value="新品・未使用">新品・未使用</option>
-          <option value="未使用に近い">未使用に近い</option>
-          <option value="目立った傷や汚れなし" selected>目立った傷や汚れなし</option>
-          <option value="やや傷や汚れあり">やや傷や汚れあり</option>
-          <option value="傷や汚れあり">傷や汚れあり</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-grid-2">
-      <div class="fg">
-        <label>サイズ</label>
-        <select id="size-${p.id}">
-          <option value="">写真から推定</option>
-          <option value="XS">XS</option><option value="S">S</option>
-          <option value="M">M</option><option value="L">L</option>
-          <option value="XL">XL</option><option value="2XL">2XL</option><option value="3XL">3XL</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>ブランド（任意）</label>
-        <input type="text" id="brand-${p.id}" placeholder="例：NIKE">
-      </div>
-    </div>
-    <div class="form-grid-2">
-      <div class="fg">
-        <label>カラー（任意）</label>
-        <input type="text" id="color-${p.id}" placeholder="例：ネイビー">
-      </div>
-      <div class="fg">
-        <label>特記事項（任意）</label>
-        <input type="text" id="notes-${p.id}" placeholder="例：タグあり">
-      </div>
-    </div>
-
-    <!-- 採寸 -->
-    <div class="form-grid-3">
-      <div class="fg"><label>身幅(cm)</label><input type="text" id="width-${p.id}" placeholder="—"></div>
-      <div class="fg"><label>身丈(cm)</label><input type="text" id="length-${p.id}" placeholder="—"></div>
-      <div class="fg"><label>袖丈(cm)</label><input type="text" id="sleeve-${p.id}" placeholder="—"></div>
-    </div>
-
-    <!-- 価格 -->
-    <div class="form-grid-2">
-      <div class="fg"><label>仕入れ値</label><div class="price-wrap"><span>¥</span><input type="number" id="cost-${p.id}" placeholder="0" min="0"></div></div>
-      <div class="fg"><label>予想売値</label><div class="price-wrap"><span>¥</span><input type="number" id="expected-${p.id}" placeholder="0" min="0"></div></div>
-    </div>
-    <div class="form-grid-2">
-      <div class="fg"><label>出品価格</label><div class="price-wrap"><span>¥</span><input type="number" id="price-${p.id}" placeholder="0" min="0"></div></div>
-      <div class="fg"><label>出品日</label><input type="text" id="date-${p.id}" placeholder="${todayStr()}" value="${todayStr()}"></div>
-    </div>
-
-    <!-- 生成結果 -->
-    <div id="result-${p.id}">${p.result ? renderResult(p) : ''}</div>
-
-  </div>`;
-}
-
-function renderResult(p) {
-  const r = p.result;
-  if (!r) return '';
-  const tags = (r.hashtags || '').split(/\s+/).filter(t => t.startsWith('#'));
-  const tagPills = tags.map(t => `<span class="tag-pill">${t}</span>`).join('');
-  const charClass = r.title.length > 40 ? ' over' : '';
-  return `
-  <div class="result-area">
-    <div class="result-row">
-      <div class="result-row-header">
-        <span class="result-label">タイトル</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="char-count${charClass}">${r.title.length}/40</span>
-          <button class="copy-xs" onclick="copyText(${JSON.stringify(r.title)}, this)">📋 コピー</button>
+    <div id="tab-sales" class="tab-panel">
+        <div class="main">
+            <h2 style="font-size:18px;margin-top:10px">📋 売上管理</h2>
+            <div id="listingList" class="listing-list"></div>
         </div>
-      </div>
-      <div class="result-value">${r.title}</div>
     </div>
-    <div class="result-row">
-      <div class="result-row-header">
-        <span class="result-label">商品説明文</span>
-        <button class="copy-xs" onclick="copyText(${JSON.stringify(r.description)}, this)">📋 コピー</button>
-      </div>
-      <div class="result-value">${r.description}</div>
+
+    <div id="tab-settings" class="tab-panel">
+        <div class="main">
+            <div class="section-card">
+                <div class="section-title">🤖 Anthropic API キー</div>
+                <div class="info-banner">
+                    🔑 <span>Anthropic の <a href="https://console.anthropic.com/" target="_blank" style="color:inherit">コンソール</a> でAPIキーを取得し、下に貼り付けてください。キーはこのデバイスにのみ保存されます。</span>
+                </div>
+                <div class="api-key-row">
+                    <input type="password" id="apiKeyInput" class="api-key-input" placeholder="sk-ant-api03-...">
+                    <button class="save-btn" onclick="saveApiKey()">保存</button>
+                </div>
+                <div id="apiKeyStatus" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-title">⚙️ GAS ウェブアプリ</div>
+                <div class="info-banner" style="background:rgba(255,209,102,0.07);border-color:rgba(255,209,102,0.25);color:var(--warning)">
+                    📌 セットアップ手順書を参照してURLを取得し、下に貼り付けてください。
+                </div>
+                <div class="gas-url-row">
+                    <input type="text" id="gasUrlInput" class="gas-url-input" placeholder="https://script.google.com/macros/d/...">
+                    <button class="gas-save-btn" onclick="saveGasUrl()">保存</button>
+                </div>
+                <div id="gasUrlStatus" style="font-size:11px;color:var(--muted);margin-top:8px;"></div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-title">📊 データ管理</div>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+                    ローカルに保存されている売上データをすべて削除します。スプレッドシートのデータは消えません。
+                </p>
+                <button class="sold-btn" onclick="clearAllData()" style="width:100%;background:rgba(255,77,77,0.15);color:var(--accent);border:1px solid rgba(255,77,77,0.3);">
+                    ローカルデータをすべて削除
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="result-row">
-      <div class="result-row-header">
-        <span class="result-label">ハッシュタグ</span>
-        <button class="copy-xs" onclick="copyText(${JSON.stringify(tags.join(' '))}, this)">📋 コピー</button>
-      </div>
-      <div class="hashtag-wrap">${tagPills}</div>
-    </div>
-  </div>
-  <div class="card-actions" style="margin-top:8px">
-    <button class="copy-all-xs" onclick="copyAll('${p.id}')">📋 説明文＋タグをコピー</button>
-    <button class="sheets-xs" id="sheets-${p.id}" onclick="sendToSheets('${p.id}')">📊 スプレッドシートへ</button>
-  </div>`;
-}
 
-// ===== Upload =====
-function triggerUpload(id) {
-  document.getElementById('file-' + id).click();
-}
+    <script>
+        let products = [];
+        let listings = JSON.parse(localStorage.getItem('mercari_listings') || '[]');
+        let gasUrl = localStorage.getItem('mercari_gas_url') || '';
+        let apiKey = localStorage.getItem('mercari_api_key') || '';
+        let productCounter = 0;
 
-function handleFiles(id, files) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const remaining = 5 - p.images.length;
-  const toAdd = Array.from(files).slice(0, remaining);
-  let loaded = 0;
-  toAdd.forEach(file => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      p.images.push({ base64: e.target.result, type: file.type });
-      loaded++;
-      if (loaded === toAdd.length) renderPreview(id);
-    };
-    reader.readAsDataURL(file);
-  });
-}
+        document.addEventListener('DOMContentLoaded', () => {
+            if (gasUrl) document.getElementById('gasUrlInput').value = gasUrl;
+            if (apiKey) {
+                document.getElementById('apiKeyInput').value = apiKey;
+                document.getElementById('apiKeyStatus').textContent = '✅ APIキーが設定されています';
+                document.getElementById('apiKeyStatus').style.color = 'var(--success)';
+            }
+            addProduct();
+            renderSalesList();
+        });
 
-function renderPreview(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  const grid = document.getElementById('preview-' + id);
-  if (!grid) return;
-  grid.innerHTML = p.images.map((img, i) => `
-    <div class="preview-item">
-      <img src="${img.base64}" alt="">
-      <button class="remove-btn" onclick="event.stopPropagation();removeImg('${id}',${i})">✕</button>
-    </div>`).join('');
-}
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            btn.classList.add('active');
+            if (tab === 'sales') renderSalesList();
+        }
 
-function removeImg(id, idx) {
-  const p = products.find(x => x.id === id);
-  if (p) { p.images.splice(idx, 1); renderPreview(id); }
-}
+        function addProduct() {
+            productCounter++;
+            const id = 'p' + Date.now();
+            products.push({ id, images: [], result: null });
+            renderProductList();
+            setTimeout(() => {
+                const el = document.getElementById('card-' + id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
 
-// ===== Generate =====
-async function generateAll() {
-  const errorMsg = document.getElementById('errorMsg');
-  errorMsg.style.display = 'none';
+        function removeProduct(id) {
+            if (products.length <= 1) {
+                alert('最低1商品は必要です');
+                return;
+            }
+            products = products.filter(p => p.id !== id);
+            renderProductList();
+        }
 
-  const toGenerate = products.filter(p => p.images.length > 0);
-  if (toGenerate.length === 0) {
-    errorMsg.textContent = '📸 少なくとも1商品に写真を追加してください';
-    errorMsg.style.display = 'block'; return;
-  }
+        function toggleCard(id) {
+            const body = document.getElementById('body-' + id);
+            const chev = document.getElementById('chev-' + id);
+            const isCollapsed = body.classList.contains('collapsed');
+            body.classList.toggle('collapsed', !isCollapsed);
+            chev.classList.toggle('open', isCollapsed);
+        }
 
-  const btn = document.getElementById('bulkBtn');
-  const btnText = document.getElementById('bulkBtnText');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressFill = document.getElementById('progressFill');
-  const progressLabel = document.getElementById('progressLabel');
+        function renderProductList() {
+            const container = document.getElementById('productList');
+            container.innerHTML = '';
+            products.forEach((p, idx) => {
+                const div = document.createElement('div');
+                div.id = 'card-' + p.id;
+                div.className = 'product-card' + (p.result ? ' done' : '');
+                div.innerHTML = productCardHTML(p, idx);
+                container.appendChild(div);
+            });
+        }
 
-  btn.disabled = true;
-  progressWrap.style.display = 'block';
+        function productCardHTML(p, idx) {
+            const titlePreview = p.result ? p.result.title : '未生成';
+            const isEmpty = !p.result;
+            const statusClass = p.result ? 'ok' : 'idle';
+            const statusLabel = p.result ? '生成済' : '未生成';
+            return `
+                <div class="card-header" onclick="toggleCard('${p.id}')">
+                    <div class="card-header-left">
+                        <div class="card-num">#${idx+1}</div>
+                        <div class="card-title-preview ${isEmpty ? 'empty' : ''}">${titlePreview}</div>
+                    </div>
+                    <div class="card-header-right">
+                        <span class="card-status ${statusClass}">${statusLabel}</span>
+                        <span class="card-chevron open" id="chev-${p.id}">▼</span>
+                        <button class="delete-card-btn" onclick="event.stopPropagation();removeProduct('${p.id}')">✕</button>
+                    </div>
+                </div>
+                <div class="card-body" id="body-${p.id}">
+                    <div class="upload-mini" id="upload-${p.id}" onclick="triggerUpload('${p.id}')">
+                        <p><strong>タップして写真を追加</strong>（最大5枚）</p>
+                        <input type="file" id="file-${p.id}" accept="image/*" multiple style="display:none" onchange="handleFiles('${p.id}', this.files)">
+                        <div class="preview-grid" id="preview-${p.id}"></div>
+                    </div>
 
-  let done = 0;
-  for (const p of toGenerate) {
-    progressLabel.textContent = `生成中... ${done + 1} / ${toGenerate.length} 商品`;
-    progressFill.style.width = `${(done / toGenerate.length) * 100}%`;
+                    <div class="form-grid-2">
+                        <div class="fg">
+                            <label>カテゴリ</label>
+                            <select id="cat-${p.id}">
+                                <option value="メンズトップス">メンズトップス</option>
+                                <option value="メンズボトムス">メンズボトムス</option>
+                                <option value="ジャージ上下セット">ジャージ上下セット</option>
+                                <option value="ジャージ上">ジャージ上</option>
+                                <option value="ジャージ下">ジャージ下</option>
+                                <option value="アウター">アウター</option>
+                                <option value="スウェット">スウェット</option>
+                                <option value="Tシャツ">Tシャツ</option>
+                                <option value="パーカー">パーカー</option>
+                                <option value="シャツ">シャツ</option>
+                                <option value="スニーカー">スニーカー</option>
+                                <option value="バッグ">バッグ</option>
+                                <option value="その他">その他</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label>コンディション</label>
+                            <select id="cond-${p.id}">
+                                <option value="新品・未使用">新品・未使用</option>
+                                <option value="未使用に近い">未使用に近い</option>
+                                <option value="目立った傷や汚れなし" selected>目立った傷や汚れなし</option>
+                                <option value="やや傷や汚れあり">やや傷や汚れあり</option>
+                                <option value="傷や汚れあり">傷や汚れあり</option>
+                            </select>
+                        </div>
+                    </div>
 
-    // カードをgenerating状態に
-    const card = document.getElementById('card-' + p.id);
-    if (card) card.className = 'product-card generating';
+                    <div class="form-grid-2">
+                        <div class="fg">
+                            <label>サイズ</label>
+                            <select id="size-${p.id}">
+                                <option value="">写真から推定</option>
+                                <option value="XS">XS</option>
+                                <option value="S">S</option>
+                                <option value="M">M</option>
+                                <option value="L">L</option>
+                                <option value="XL">XL</option>
+                                <option value="2XL">2XL</option>
+                                <option value="3XL">3XL</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label>ブランド（任意）</label>
+                            <input type="text" id="brand-${p.id}" placeholder="例：NIKE">
+                        </div>
+                    </div>
 
-    // gen spinner表示
-    const resultEl = document.getElementById('result-' + p.id);
-    if (resultEl) resultEl.innerHTML = `<div class="gen-spinner"><div class="spin"></div>出品文を生成中...</div>`;
+                    <div class="form-grid-2">
+                        <div class="fg">
+                            <label>カラー（任意）</label>
+                            <input type="text" id="color-${p.id}" placeholder="例：ネイビー">
+                        </div>
+                        <div class="fg">
+                            <label>特記事項（任意）</label>
+                            <input type="text" id="notes-${p.id}" placeholder="例：タグあり">
+                        </div>
+                    </div>
 
-    await generateOne(p);
-    done++;
+                    <div class="form-grid-3">
+                        <div class="fg"><label>身幅(cm)</label><input type="text" id="width-${p.id}" placeholder="—"></div>
+                        <div class="fg"><label>身丈(cm)</label><input type="text" id="length-${p.id}" placeholder="—"></div>
+                        <div class="fg"><label>袖丈(cm)</label><input type="text" id="sleeve-${p.id}" placeholder="—"></div>
+                    </div>
 
-    // カード更新
-    if (card) card.className = 'product-card done';
-    updateCardResult(p);
-  }
+                    <div class="form-grid-2">
+                        <div class="fg"><label>仕入れ値</label><div class="price-wrap"><span>¥</span><input type="number" id="cost-${p.id}" placeholder="0" min="0"></div></div>
+                        <div class="fg"><label>予想売値</label><div class="price-wrap"><span>¥</span><input type="number" id="expected-${p.id}" placeholder="0" min="0"></div></div>
+                    </div>
 
-  progressFill.style.width = '100%';
-  progressLabel.textContent = `✅ ${done}商品の生成が完了しました！`;
-  btn.disabled = false;
-  btnText.textContent = '✦ 全商品の出品文を一括生成';
-}
+                    <div class="form-grid-2">
+                        <div class="fg"><label>出品価格</label><div class="price-wrap"><span>¥</span><input type="number" id="price-${p.id}" placeholder="0" min="0"></div></div>
+                        <div class="fg"><label>出品日</label><input type="text" id="date-${p.id}" placeholder="${todayStr()}" value="${todayStr()}"></div>
+                    </div>
 
-async function generateOne(p) {
-  const id = p.id;
-  const category = document.getElementById('cat-' + id)?.value || 'メンズトップス';
-  const condition = document.getElementById('cond-' + id)?.value || '目立った傷や汚れなし';
-  const size = document.getElementById('size-' + id)?.value || '';
-  const brand = document.getElementById('brand-' + id)?.value || '';
-  const color = document.getElementById('color-' + id)?.value || '';
-  const notes = document.getElementById('notes-' + id)?.value || '';
-  const width = document.getElementById('width-' + id)?.value || '';
-  const bodyLen = document.getElementById('length-' + id)?.value || '';
-  const sleeve = document.getElementById('sleeve-' + id)?.value || '';
-  const hasMeasure = width || bodyLen || sleeve;
-  const measureLine = hasMeasure
-    ? `身幅　${width||'—'}cm\n身丈　${bodyLen||'—'}cm\n袖丈　${sleeve||'—'}cm\n※素人採寸のため多少の誤差はご了承くださいませ。`
-    : '（採寸なし）';
+                    <div id="result-${p.id}">${p.result ? renderResult(p) : ''}</div>
+                </div>
+            `;
+        }
 
-  const imageContents = p.images.map(img => ({
-    type: 'image', source: { type: 'base64', media_type: img.type, data: img.base64.split(',')[1] }
-  }));
+        function renderResult(p) {
+            const r = p.result;
+            if (!r) return '';
+            const tags = (r.hashtags || '').split(/\s+/).filter(t => t.startsWith('#'));
+            const tagPills = tags.map(t => `<span class="tag-pill">${t}</span>`).join('');
+            const charClass = r.title.length > 40 ? ' over' : '';
+            return `
+                <div class="result-area">
+                    <div class="result-row">
+                        <div class="result-row-header">
+                            <span class="result-label">タイトル</span>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="char-count${charClass}">${r.title.length}/40</span>
+                                <button class="copy-xs" onclick="copyText(${JSON.stringify(r.title)}, this)">📋 コピー</button>
+                            </div>
+                        </div>
+                        <div class="result-value">${r.title}</div>
+                    </div>
+                    <div class="result-row">
+                        <div class="result-row-header">
+                            <span class="result-label">商品説明文</span>
+                            <button class="copy-xs" onclick="copyText(${JSON.stringify(r.description)}, this)">📋 コピー</button>
+                        </div>
+                        <div class="result-value">${r.description}</div>
+                    </div>
+                    <div class="result-row">
+                        <div class="result-row-header">
+                            <span class="result-label">ハッシュタグ</span>
+                            <button class="copy-xs" onclick="copyText(${JSON.stringify(tags.join(' '))}, this)">📋 コピー</button>
+                        </div>
+                        <div class="hashtag-wrap">${tagPills}</div>
+                    </div>
+                </div>
+                <div class="card-actions" style="margin-top:8px">
+                    <button class="copy-all-xs" onclick="copyAll('${p.id}')">📋 説明文＋タグをコピー</button>
+                    <button class="sheets-xs" id="sheets-${p.id}" onclick="sendToSheets('${p.id}')">📊 スプレッドシートへ</button>
+                </div>
+            `;
+        }
 
-  const prompt = `あなたはメルカリで古着・スポーツウェアを大量出品しているプロセラーです。
-画像と情報をもとに、売れやすいメルカリ出品データをJSONで返してください。
+        function triggerUpload(id) {
+            document.getElementById('file-' + id).click();
+        }
+
+        function handleFiles(id, files) {
+            const p = products.find(x => x.id === id);
+            if (!p) return;
+            const remaining = 5 - p.images.length;
+            const toAdd = Array.from(files).slice(0, remaining);
+            let loaded = 0;
+            toAdd.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    p.images.push({ base64: e.target.result, type: file.type });
+                    loaded++;
+                    if (loaded === toAdd.length) renderPreview(id);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderPreview(id) {
+            const p = products.find(x => x.id === id);
+            if (!p) return;
+            const grid = document.getElementById('preview-' + id);
+            if (!grid) return;
+            grid.innerHTML = p.images.map((img, i) => `
+                <div class="preview-item">
+                    <img src="${img.base64}" alt="">
+                    <button class="remove-btn" onclick="event.stopPropagation();removeImg('${id}',${i})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function removeImg(id, idx) {
+            const p = products.find(x => x.id === id);
+            if (p) {
+                p.images.splice(idx, 1);
+                renderPreview(id);
+            }
+        }
+
+        async function generateAll() {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.style.display = 'none';
+
+            if (!apiKey) {
+                errorMsg.textContent = '🔑 APIキーが未設定です。「設定」タブでAnthropicのAPIキーを入力してください。';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            const toGenerate = products.filter(p => p.images.length > 0);
+            if (toGenerate.length === 0) {
+                errorMsg.textContent = '📸 少なくとも1商品に写真を追加してください';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            const btn = document.getElementById('bulkBtn');
+            const btnText = document.getElementById('bulkBtnText');
+            const progressWrap = document.getElementById('progressWrap');
+            const progressFill = document.getElementById('progressFill');
+            const progressLabel = document.getElementById('progressLabel');
+            btn.disabled = true;
+            progressWrap.style.display = 'block';
+            let done = 0;
+            for (const p of toGenerate) {
+                progressLabel.textContent = `生成中... ${done + 1} / ${toGenerate.length} 商品`;
+                progressFill.style.width = `${(done / toGenerate.length) * 100}%`;
+                const card = document.getElementById('card-' + p.id);
+                if (card) card.className = 'product-card generating';
+                const resultEl = document.getElementById('result-' + p.id);
+                if (resultEl) resultEl.innerHTML = `<div class="gen-spinner"><div class="spin"></div>出品文を生成中...</div>`;
+                await generateOne(p);
+                done++;
+                if (card) card.className = 'product-card done';
+                updateCardResult(p);
+            }
+            progressFill.style.width = '100%';
+            progressLabel.textContent = `✅ ${done}商品の生成が完了しました！`;
+            btn.disabled = false;
+            btnText.textContent = '✦ 全商品の出品文を一括生成';
+        }
+
+        async function generateOne(p) {
+            const id = p.id;
+            const category = document.getElementById('cat-' + id)?.value || 'メンズトップス';
+            const condition = document.getElementById('cond-' + id)?.value || '目立った傷や汚れなし';
+            const size = document.getElementById('size-' + id)?.value || '';
+            const brand = document.getElementById('brand-' + id)?.value || '';
+            const color = document.getElementById('color-' + id)?.value || '';
+            const notes = document.getElementById('notes-' + id)?.value || '';
+            const width = document.getElementById('width-' + id)?.value || '';
+            const bodyLen = document.getElementById('length-' + id)?.value || '';
+            const sleeve = document.getElementById('sleeve-' + id)?.value || '';
+            const hasMeasure = width || bodyLen || sleeve;
+            const measureLine = hasMeasure
+                ? `身幅　${width||'—'}cm\n身丈　${bodyLen||'—'}cm\n袖丈　${sleeve||'—'}cm\n※素人採寸のため多少の誤差はご了承くださいませ。`
+                : '（採寸なし）';
+
+            const imageContents = p.images.map(img => ({
+                type: 'image',
+                source: {
+                    type: 'base64',
+                    media_type: img.type,
+                    data: img.base64.split(',')[1]
+                }
+            }));
+
+            const prompt = `あなたはメルカリで古着・スポーツウェアを大量出品しているプロセラーです。画像と情報をもとに、売れやすいメルカリ出品データをJSONで返してください。
 
 【商品情報】
 カテゴリ: ${category}
@@ -584,7 +1057,7 @@ async function generateOne(p) {
 
 【descriptionテンプレート・厳守】
 ◆商品説明
-{商品の特徴・状態・おすすめポイントを2〜3文。使用感の少なさや長く使える点を訴求}
+{商品の特徴・状態・おすすめポイントを2〜3文}
 
 ◆ブランド
 {ブランド名}
@@ -592,7 +1065,7 @@ async function generateOne(p) {
 ◆カラー
 {カラー}
 
-◆サイズ 
+◆サイズ
 {サイズ表記}
 ${measureLine}
 
@@ -602,204 +1075,248 @@ ${measureLine}
 
 {"title":"...","description":"...","hashtags":"..."}`;
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      　body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 1200,
-        messages: [{ role: 'user', content: [...imageContents, { type: 'text', text: prompt }] }]
-      })
-    });
-    const data = await res.json();
-    const raw = data.content.map(i => i.text || '').join('');
-    const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('JSON parse error');
-    p.result = JSON.parse(match[0]);
-  } catch(e) {
-    p.result = { title: '生成失敗', description: 'エラー: ' + e.message, hashtags: '' };
-    console.error(e);
-  }
-}
+            try {
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-5',
+                        max_tokens: 1200,
+                        messages: [{
+                            role: 'user',
+                            content: [...imageContents, { type: 'text', text: prompt }]
+                        }]
+                    })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+                const raw = data.content.map(i => i.text || '').join('');
+                const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+                if (!match) throw new Error('JSONの解析に失敗しました');
+                p.result = JSON.parse(match[0]);
+            } catch(e) {
+                p.result = { title: '生成失敗', description: 'エラー: ' + e.message, hashtags: '' };
+                console.error(e);
+            }
+        }
 
-function updateCardResult(p) {
-  // ヘッダーのタイトルプレビュー更新
-  const cardEl = document.getElementById('card-' + p.id);
-  if (!cardEl) return;
-  const preview = cardEl.querySelector('.card-title-preview');
-  if (preview) { preview.textContent = p.result?.title || '生成失敗'; preview.classList.remove('empty'); }
-  const statusEl = cardEl.querySelector('.card-status');
-  if (statusEl) { statusEl.textContent = '生成済'; statusEl.className = 'card-status ok'; }
-  // 結果エリア更新
-  const resultEl = document.getElementById('result-' + p.id);
-  if (resultEl) resultEl.innerHTML = renderResult(p);
-}
+        function updateCardResult(p) {
+            const cardEl = document.getElementById('card-' + p.id);
+            if (!cardEl) return;
+            const preview = cardEl.querySelector('.card-title-preview');
+            if (preview) {
+                preview.textContent = p.result?.title || '生成失敗';
+                preview.classList.remove('empty');
+            }
+            const statusEl = cardEl.querySelector('.card-status');
+            if (statusEl) {
+                statusEl.textContent = '生成済';
+                statusEl.className = 'card-status ok';
+            }
+            const resultEl = document.getElementById('result-' + p.id);
+            if (resultEl) resultEl.innerHTML = renderResult(p);
+        }
 
-// ===== Copy =====
-function copyText(text, btn) {
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✅ コピー済'; btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
-  });
-}
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '✅ コピー済';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = orig;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
 
-function copyAll(id) {
-  const p = products.find(x => x.id === id);
-  if (!p?.result) return;
-  const tags = (p.result.hashtags || '').split(/\s+/).filter(t => t.startsWith('#'));
-  const text = p.result.description + '\n\n' + tags.join(' ');
-  const btn = event.currentTarget;
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✅ コピーしました！';
-    setTimeout(() => btn.textContent = orig, 2200);
-  });
-}
+        function copyAll(id) {
+            const p = products.find(x => x.id === id);
+            if (!p?.result) return;
+            const tags = (p.result.hashtags || '').split(/\s+/).filter(t => t.startsWith('#'));
+            const text = p.result.description + '\n\n' + tags.join(' ');
+            const btn = event.currentTarget;
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = '✅ コピーしました！';
+                setTimeout(() => btn.textContent = orig, 2200);
+            });
+        }
 
-// ===== Sheets転記 =====
-async function sendToSheets(id) {
-  const p = products.find(x => x.id === id);
-  if (!p?.result) return;
-  const btn = document.getElementById('sheets-' + id);
+        async function sendToSheets(id) {
+            const p = products.find(x => x.id === id);
+            if (!p?.result) return;
+            const btn = document.getElementById('sheets-' + id);
+            const newListing = {
+                id: Date.now().toString(),
+                title: p.result.title,
+                costPrice: parseInt(document.getElementById('cost-' + id)?.value) || 0,
+                expectedPrice: parseInt(document.getElementById('expected-' + id)?.value) || 0,
+                listingPrice: parseInt(document.getElementById('price-' + id)?.value) || 0,
+                listingDate: document.getElementById('date-' + id)?.value || todayStr(),
+                usePromo: false,
+                status: 'selling',
+                soldPrice: null,
+                soldDate: null,
+                profit: null,
+                fee: null,
+                priceDiff: null,
+                daysToSell: null
+            };
+            listings.push(newListing);
+            saveListing();
+            if (btn) { btn.disabled = true; btn.textContent = '転記中...'; }
+            if (gasUrl) {
+                try {
+                    await fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify({ action: 'addListing', data: newListing }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    console.warn(e);
+                }
+            }
+            if (btn) { btn.textContent = '✅ 転記済'; btn.disabled = true; }
+            if (!gasUrl) alert('⚠️ GAS URLが未設定です。「設定」タブでURLを設定するとスプレッドシートにも書き込まれます。\nローカルへの保存は完了しました。');
+        }
 
-  const newListing = {
-    id: Date.now().toString(),
-    title: p.result.title,
-    costPrice: parseInt(document.getElementById('cost-' + id)?.value) || 0,
-    expectedPrice: parseInt(document.getElementById('expected-' + id)?.value) || 0,
-    listingPrice: parseInt(document.getElementById('price-' + id)?.value) || 0,
-    listingDate: document.getElementById('date-' + id)?.value || todayStr(),
-    usePromo: false,
-    status: 'selling',
-    soldPrice: null, soldDate: null, profit: null, fee: null, priceDiff: null, daysToSell: null
-  };
+        function renderSalesList() {
+            const el = document.getElementById('listingList');
+            if (!el) return;
+            if (listings.length === 0) {
+                el.innerHTML = `<div class="empty-state"><span class="empty-icon">📦</span>出品データがありません。<br>「出品する」タブで出品文を生成し、<br>スプレッドシートに転記してください。</div>`;
+                return;
+            }
+            el.innerHTML = listings.slice().reverse().map(l => listingCardHTML(l)).join('');
+        }
 
-  listings.push(newListing);
-  saveListing();
+        function listingCardHTML(l) {
+            const isSold = l.status === 'sold';
+            return `
+                <div class="listing-card">
+                    <div class="lc-header">
+                        <div class="lc-title">${l.title}</div>
+                        <span class="status-badge ${isSold ? 'status-sold' : 'status-selling'}">${isSold ? '売れた' : '出品中'}</span>
+                        ${l.usePromo ? '<span class="status-badge" style="background:rgba(255,140,66,0.15);color:var(--accent2);border:1px solid rgba(255,140,66,0.3)">プロモ</span>' : ''}
+                    </div>
+                    <div class="lc-body">
+                        <div class="info-grid">
+                            <div class="ic"><div class="ic-label">仕入れ値</div><div class="ic-value">¥${num(l.costPrice)}</div></div>
+                            <div class="ic"><div class="ic-label">予想売値</div><div class="ic-value">¥${num(l.expectedPrice)}</div></div>
+                            <div class="ic"><div class="ic-label">出品価格</div><div class="ic-value">¥${num(l.listingPrice)}</div></div>
+                            <div class="ic"><div class="ic-label">出品日</div><div class="ic-value" style="font-size:12px">${l.listingDate}</div></div>
+                            ${isSold ? `
+                                <div class="ic"><div class="ic-label">販売価格</div><div class="ic-value">¥${num(l.soldPrice)}</div></div>
+                                <div class="ic"><div class="ic-label">手数料(${l.usePromo?'15%🔥':'10%'})</div><div class="ic-value" style="color:var(--muted)">-¥${num(l.fee)}</div></div>
+                            ` : '<div></div><div></div>'}
+                        </div>
+                        ${isSold ? `
+                            <div class="sold-result-grid">
+                                <div class="ic"><div class="ic-label">販売利益</div><div class="ic-value ${l.profit>=0?'pos':'neg'}">¥${num(l.profit)}</div></div>
+                                <div class="ic"><div class="ic-label">販売日</div><div class="ic-value" style="font-size:12px">${l.soldDate}</div></div>
+                                <div class="ic"><div class="ic-label">予想との差</div><div class="ic-value ${l.priceDiff>=0?'pos':'neg'}">${l.priceDiff>=0?'+':''}¥${num(l.priceDiff)}</div></div>
+                                <div class="ic"><div class="ic-label">売れるまで</div><div class="ic-value">${l.daysToSell}日</div></div>
+                            </div>
+                        ` : `
+                            <div class="sold-section">
+                                <div class="sold-title">売れたら入力</div>
+                                <div class="sold-row">
+                                    <div class="sold-input-w">
+                                        <label>実際の売値</label>
+                                        <div class="price-wrap"><span>¥</span><input type="number" id="sold-${l.id}" placeholder="0" min="0" style="padding-left:22px"></div>
+                                    </div>
+                                    <button class="sold-btn" onclick="markSold('${l.id}')">✓ 売れた</button>
+                                </div>
+                                <div style="margin-top:8px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="document.getElementById('promo-${l.id}').click()">
+                                    <input type="checkbox" id="promo-${l.id}" style="width:15px;height:15px;accent-color:var(--accent2);cursor:pointer;flex-shrink:0">
+                                    <div><div style="font-size:12px;font-weight:500">プロモーション利用</div><div style="font-size:10px;color:var(--muted)">手数料+5%（合計15%）</div></div>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
 
-  if (btn) { btn.disabled = true; btn.textContent = '転記中...'; }
+        function markSold(id) {
+            const soldPrice = parseInt(document.getElementById('sold-' + id)?.value);
+            if (!soldPrice || soldPrice <= 0) { alert('売値を入力してください'); return; }
+            const usePromo = document.getElementById('promo-' + id)?.checked || false;
+            const idx = listings.findIndex(l => l.id === id);
+            if (idx === -1) return;
+            const l = listings[idx];
+            const fee = Math.round(soldPrice * (usePromo ? 0.15 : 0.10));
+            const profit = soldPrice - fee - l.costPrice;
+            const soldDate = todayStr();
+            listings[idx] = { ...l, status:'sold', soldPrice, soldDate, fee, profit, priceDiff: soldPrice - l.expectedPrice, daysToSell: calcDays(l.listingDate, soldDate), usePromo };
+            saveListing();
+            if (gasUrl) {
+                fetch(gasUrl, {
+                    method:'POST',
+                    mode:'no-cors',
+                    body: JSON.stringify({ action:'updateSold', data: listings[idx] }),
+                    headers:{'Content-Type':'application/json'}
+                }).catch(()=>{});
+            }
+            renderSalesList();
+        }
 
-  if (gasUrl) {
-    try {
-      await fetch(gasUrl, {
-        method: 'POST', mode: 'no-cors',
-        body: JSON.stringify({ action: 'addListing', data: newListing }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch(e) { console.warn(e); }
-  }
+        function saveApiKey() {
+            const val = document.getElementById('apiKeyInput').value.trim();
+            if (!val.startsWith('sk-ant-')) {
+                document.getElementById('apiKeyStatus').textContent = '⚠️ 正しいAnthropicのAPIキーを入力してください（sk-ant- で始まります）';
+                document.getElementById('apiKeyStatus').style.color = '#ff8080';
+                return;
+            }
+            apiKey = val;
+            localStorage.setItem('mercari_api_key', apiKey);
+            document.getElementById('apiKeyStatus').textContent = '✅ 保存しました';
+            document.getElementById('apiKeyStatus').style.color = 'var(--success)';
+        }
 
-  if (btn) {
-    btn.textContent = '✅ 転記済';
-    btn.disabled = true;
-  }
+        function saveGasUrl() {
+            const val = document.getElementById('gasUrlInput').value.trim();
+            if (!val.startsWith('https://script.google.com')) {
+                document.getElementById('gasUrlStatus').textContent = '⚠️ 正しいGAS URLを入力してください';
+                document.getElementById('gasUrlStatus').style.color = '#ff8080';
+                return;
+            }
+            gasUrl = val;
+            localStorage.setItem('mercari_gas_url', gasUrl);
+            document.getElementById('gasUrlStatus').textContent = '✅ 保存しました';
+            document.getElementById('gasUrlStatus').style.color = 'var(--success)';
+        }
 
-  if (!gasUrl) alert('⚠️ GAS URLが未設定です。「設定」タブでURLを設定するとスプレッドシートにも書き込まれます。\nローカルへの保存は完了しました。');
-}
+        function saveListing() {
+            localStorage.setItem('mercari_listings', JSON.stringify(listings));
+        }
 
-// ===== 売上管理 =====
-function renderSalesList() {
-  const el = document.getElementById('listingList');
-  if (!el) return;
-  if (listings.length === 0) {
-    el.innerHTML = `<div class="empty-state"><span class="empty-icon">📦</span>出品データがありません。<br>「出品する」タブで出品文を生成し、<br>スプレッドシートに転記してください。</div>`;
-    return;
-  }
-  el.innerHTML = listings.slice().reverse().map(l => listingCardHTML(l)).join('');
-}
+        function num(n) { return (n||0).toLocaleString(); }
 
-function listingCardHTML(l) {
-  const isSold = l.status === 'sold';
-  return `
-  <div class="listing-card">
-    <div class="lc-header">
-      <div class="lc-title">${l.title}</div>
-      <span class="status-badge ${isSold ? 'status-sold' : 'status-selling'}">${isSold ? '売れた' : '出品中'}</span>
-      ${l.usePromo ? '<span class="status-badge" style="background:rgba(255,140,66,0.15);color:var(--accent2);border:1px solid rgba(255,140,66,0.3)">プロモ</span>' : ''}
-    </div>
-    <div class="lc-body">
-      <div class="info-grid">
-        <div class="ic"><div class="ic-label">仕入れ値</div><div class="ic-value">¥${num(l.costPrice)}</div></div>
-        <div class="ic"><div class="ic-label">予想売値</div><div class="ic-value">¥${num(l.expectedPrice)}</div></div>
-        <div class="ic"><div class="ic-label">出品価格</div><div class="ic-value">¥${num(l.listingPrice)}</div></div>
-        <div class="ic"><div class="ic-label">出品日</div><div class="ic-value" style="font-size:12px">${l.listingDate}</div></div>
-        ${isSold ? `
-        <div class="ic"><div class="ic-label">販売価格</div><div class="ic-value">¥${num(l.soldPrice)}</div></div>
-        <div class="ic"><div class="ic-label">手数料(${l.usePromo?'15%🔥':'10%'})</div><div class="ic-value" style="color:var(--muted)">-¥${num(l.fee)}</div></div>
-        ` : '<div></div><div></div>'}
-      </div>
-      ${isSold ? `
-      <div class="sold-result-grid">
-        <div class="ic"><div class="ic-label">販売利益</div><div class="ic-value ${l.profit>=0?'pos':'neg'}">¥${num(l.profit)}</div></div>
-        <div class="ic"><div class="ic-label">販売日</div><div class="ic-value" style="font-size:12px">${l.soldDate}</div></div>
-        <div class="ic"><div class="ic-label">予想との差</div><div class="ic-value ${l.priceDiff>=0?'pos':'neg'}">${l.priceDiff>=0?'+':''}¥${num(l.priceDiff)}</div></div>
-        <div class="ic"><div class="ic-label">売れるまで</div><div class="ic-value">${l.daysToSell}日</div></div>
-      </div>
-      ` : `
-      <div class="sold-section">
-        <div class="sold-title">売れたら入力</div>
-        <div class="sold-row">
-          <div class="sold-input-w">
-            <label>実際の売値</label>
-            <div class="price-wrap"><span>¥</span><input type="number" id="sold-${l.id}" placeholder="0" min="0" style="padding-left:22px"></div>
-          </div>
-          <button class="sold-btn" onclick="markSold('${l.id}')">✓ 売れた</button>
-        </div>
-        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer" onclick="document.getElementById('promo-${l.id}').click()">
-          <input type="checkbox" id="promo-${l.id}" style="width:15px;height:15px;accent-color:var(--accent2);cursor:pointer;flex-shrink:0">
-          <div><div style="font-size:12px;font-weight:500">プロモーション利用</div><div style="font-size:10px;color:var(--muted)">手数料+5%（合計15%）</div></div>
-        </div>
-      </div>
-      `}
-    </div>
-  </div>`;
-}
+        function todayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        }
 
-function markSold(id) {
-  const soldPrice = parseInt(document.getElementById('sold-' + id)?.value);
-  if (!soldPrice || soldPrice <= 0) { alert('売値を入力してください'); return; }
-  const usePromo = document.getElementById('promo-' + id)?.checked || false;
-  const idx = listings.findIndex(l => l.id === id);
-  if (idx === -1) return;
-  const l = listings[idx];
-  const fee = Math.round(soldPrice * (usePromo ? 0.15 : 0.10));
-  const profit = soldPrice - fee - l.costPrice;
-  const soldDate = todayStr();
-  listings[idx] = { ...l, status:'sold', soldPrice, soldDate, fee, profit, priceDiff: soldPrice - l.expectedPrice, daysToSell: calcDays(l.listingDate, soldDate), usePromo };
-  saveListing();
-  if (gasUrl) {
-    fetch(gasUrl, { method:'POST', mode:'no-cors', body: JSON.stringify({ action:'updateSold', data: listings[idx] }), headers:{'Content-Type':'application/json'} }).catch(()=>{});
-  }
-  renderSalesList();
-}
+        function calcDays(from, to) {
+            try {
+                return Math.round((new Date(to.replace(/\//g,'-')) - new Date(from.replace(/\//g,'-'))) / 86400000);
+            } catch { return '—'; }
+        }
 
-// ===== GAS =====
-function saveGasUrl() {
-  const val = document.getElementById('gasUrlInput').value.trim();
-  if (!val.startsWith('https://script.google.com')) {
-    document.getElementById('gasUrlStatus').textContent = '⚠️ 正しいGAS URLを入力してください';
-    document.getElementById('gasUrlStatus').style.color = '#ff8080'; return;
-  }
-  gasUrl = val; localStorage.setItem('mercari_gas_url', gasUrl);
-  document.getElementById('gasUrlStatus').textContent = '✅ 保存しました';
-  document.getElementById('gasUrlStatus').style.color = 'var(--success)';
-}
-
-// ===== Helpers =====
-function saveListing() { localStorage.setItem('mercari_listings', JSON.stringify(listings)); }
-function num(n) { return (n||0).toLocaleString(); }
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
-}
-function calcDays(from, to) {
-  try { return Math.round((new Date(to.replace(/\//g,'-')) - new Date(from.replace(/\//g,'-'))) / 86400000); }
-  catch { return '—'; }
-}
-function clearAllData() {
-  if (confirm('売上データをすべて削除しますか？')) { listings=[]; saveListing(); renderSalesList(); }
-}
-</script>
+        function clearAllData() {
+            if (confirm('売上データをすべて削除しますか？')) {
+                listings = [];
+                saveListing();
+                renderSalesList();
+            }
+        }
+    </script>
 </body>
 </html>
