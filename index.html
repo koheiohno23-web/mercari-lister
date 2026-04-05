@@ -935,28 +935,20 @@
             const p = products.find(x => x.id === id);
             if (!p) return;
             const remaining = 5 - p.images.length;
-            const toAdd = Array.from(files).slice(0, remaining);
             const supported = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            const allFiles = Array.from(files);
+            const unsupported = allFiles.filter(f => !supported.includes(f.type));
+            if (unsupported.length > 0) {
+                alert('⚠️ HEIC/HEIFなどの形式には対応していません。\n写真アプリで「JPEGとしてエクスポート」するか、Macの場合はプレビューで開いてJPEG形式で書き出してください。');
+            }
+            const toAdd = allFiles.filter(f => supported.includes(f.type)).slice(0, remaining);
             let loaded = 0;
-            let total = 0;
             toAdd.forEach(file => {
-                if (!file.type.startsWith('image/')) return;
-                total++;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        // Canvas で PNG に変換（HEIC等の非対応形式に対応）
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        canvas.getContext('2d').drawImage(img, 0, 0);
-                        const base64 = canvas.toDataURL('image/jpeg', 0.85);
-                        p.images.push({ base64, type: 'image/jpeg' });
-                        loaded++;
-                        if (loaded === total) renderPreview(id);
-                    };
-                    img.src = e.target.result;
+                    p.images.push({ base64: e.target.result, type: file.type });
+                    loaded++;
+                    if (loaded === toAdd.length) renderPreview(id);
                 };
                 reader.readAsDataURL(file);
             });
