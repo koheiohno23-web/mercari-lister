@@ -538,6 +538,62 @@
 
         .sold-result-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 
+        .sales-search-bar {
+            position:relative;
+            display:flex;
+            align-items:center;
+            margin:10px 0 6px;
+        }
+        .sales-search-icon {
+            position:absolute;
+            left:12px;
+            font-size:13px;
+            color:var(--muted);
+            pointer-events:none;
+        }
+        .sales-search-input {
+            width:100%;
+            padding:11px 38px 11px 34px;
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:10px;
+            color:var(--text);
+            font-size:13px;
+            font-family:inherit;
+            outline:none;
+            transition:border-color .15s;
+        }
+        .sales-search-input:focus {
+            border-color:var(--accent);
+        }
+        .sales-search-input::placeholder { color:var(--muted); font-size:12px; }
+        .sales-search-clear {
+            position:absolute;
+            right:8px;
+            background:var(--border);
+            color:var(--text);
+            border:none;
+            width:22px;
+            height:22px;
+            border-radius:50%;
+            font-size:14px;
+            line-height:1;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .mgmt-badge {
+            font-family:'Bebas Neue',sans-serif;
+            font-size:13px;
+            letter-spacing:1px;
+            padding:3px 8px;
+            border-radius:6px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            color:#fff;
+            white-space:nowrap;
+            flex-shrink:0;
+        }
         .sold-toggle-bar {
             display:flex;
             align-items:center;
@@ -741,6 +797,7 @@
         let apiKey = localStorage.getItem('mercari_api_key') || '';
         let productCounter = 0;
         let showSoldItems = false;
+        let salesSearchQuery = '';
 
         document.addEventListener('DOMContentLoaded', () => {
             if (gasUrl) document.getElementById('gasUrlInput').value = gasUrl;
@@ -1179,6 +1236,7 @@ ${measureLine}
             const btn = document.getElementById('sheets-' + id);
             const newListing = {
                 id: Date.now().toString(),
+                managementNumber: nextManagementNumber(),
                 title: p.result.title,
                 costPrice: parseInt(document.getElementById('cost-' + id)?.value) || 0,
                 expectedPrice: parseInt(document.getElementById('expected-' + id)?.value) || 0,
@@ -1224,7 +1282,15 @@ ${measureLine}
             }
             const selling = listings.filter(l => l.status !== 'sold');
             const sold = listings.filter(l => l.status === 'sold');
-            const visibleList = showSoldItems ? listings.slice().reverse() : selling.slice().reverse();
+            let visibleList = showSoldItems ? listings.slice().reverse() : selling.slice().reverse();
+            const q = salesSearchQuery.trim().toLowerCase();
+            if (q) {
+                const qNorm = q.replace(/^#/, '');
+                visibleList = visibleList.filter(l =>
+                    String(l.managementNumber || '').toLowerCase().includes(qNorm) ||
+                    String(l.title || '').toLowerCase().includes(q)
+                );
+            }
             const toggleLabel = showSoldItems ? `売れた商品を隠す` : `売れた商品を表示 (${sold.length}件)`;
             const toggleHTML = sold.length > 0 ? `
                 <div class="sold-toggle-bar">
@@ -1232,10 +1298,34 @@ ${measureLine}
                     <button class="sold-toggle-btn" onclick="toggleSoldView()">${toggleLabel}</button>
                 </div>
             ` : `<div class="sold-toggle-bar"><span class="sold-count-label">出品中: ${selling.length}件</span></div>`;
+            const searchHTML = `
+                <div class="sales-search-bar">
+                    <span class="sales-search-icon">🔍</span>
+                    <input type="text" id="salesSearchInput" class="sales-search-input" placeholder="管理番号 or 商品名で検索（例: 001 / Tシャツ）" value="${salesSearchQuery.replace(/"/g,'&quot;')}" oninput="onSalesSearch(this.value)">
+                    ${salesSearchQuery ? '<button class="sales-search-clear" onclick="clearSalesSearch()">×</button>' : ''}
+                </div>
+            `;
             const cardsHTML = visibleList.length === 0
-                ? `<div class="empty-state"><span class="empty-icon">✅</span>出品中の商品はありません。</div>`
+                ? (q
+                    ? `<div class="empty-state"><span class="empty-icon">🔎</span>「${salesSearchQuery}」に一致する商品はありません。</div>`
+                    : `<div class="empty-state"><span class="empty-icon">✅</span>出品中の商品はありません。</div>`)
                 : visibleList.map(l => listingCardHTML(l)).join('');
-            el.innerHTML = toggleHTML + cardsHTML;
+            el.innerHTML = searchHTML + toggleHTML + cardsHTML;
+            const input = document.getElementById('salesSearchInput');
+            if (input && document.activeElement !== input && salesSearchQuery) {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }
+        }
+
+        function onSalesSearch(val) {
+            salesSearchQuery = val;
+            renderSalesList();
+        }
+
+        function clearSalesSearch() {
+            salesSearchQuery = '';
+            renderSalesList();
         }
 
         function toggleSoldView() {
@@ -1248,6 +1338,7 @@ ${measureLine}
             return `
                 <div class="listing-card">
                     <div class="lc-header">
+                        ${l.managementNumber ? `<span class="mgmt-badge">#${l.managementNumber}</span>` : ''}
                         <div class="lc-title">${l.title}</div>
                         <span class="status-badge ${isSold ? 'status-sold' : 'status-selling'}">${isSold ? '売れた' : '出品中'}</span>
                         ${l.usePromo ? '<span class="status-badge" style="background:rgba(255,140,66,0.15);color:var(--accent2);border:1px solid rgba(255,140,66,0.3)">プロモ</span>' : ''}
@@ -1357,6 +1448,14 @@ ${measureLine}
         }
 
         function num(n) { return (n||0).toLocaleString(); }
+
+        function nextManagementNumber() {
+            const max = listings.reduce((m, l) => {
+                const n = parseInt(l.managementNumber, 10);
+                return isNaN(n) ? m : Math.max(m, n);
+            }, 0);
+            return String(max + 1).padStart(3, '0');
+        }
 
         function todayStr() {
             const d = new Date();
