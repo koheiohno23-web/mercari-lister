@@ -816,7 +816,7 @@
 <body>
     <header>
         <h1>MERCARI LISTER</h1>
-        <span class="badge">AI</span>
+        <span class="badge">AI v5</span>
     </header>
 
     <div class="tabs">
@@ -855,6 +855,7 @@
                 <h2 style="font-size:18px">📋 売上管理</h2>
                 <button id="syncBtn" class="sync-btn" onclick="syncFromSheet(true)">🔄 更新</button>
             </div>
+            <div id="syncStatus" style="font-size:11px;line-height:1.6;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0;word-break:break-word;"></div>
             <div id="salesControls"></div>
             <div id="listingList" class="listing-list"></div>
         </div>
@@ -1683,23 +1684,46 @@ ${measureLine}
 
         function num(n) { return (n||0).toLocaleString(); }
 
+        let syncDiag = [];
+        function setSyncStatus(msg, color) {
+            const el = document.getElementById('syncStatus');
+            if (el) {
+                el.innerHTML = msg;
+                el.style.color = color || 'var(--muted)';
+            }
+        }
+
         // スプレッドシートから全データを読み込む
         // まず fetch（PC/Chrome向け・高速）、ダメなら JSONP（Safari向けフォールバック）を試す
         async function fetchSheetListings() {
-            if (!gasUrl) return null;
+            syncDiag = [];
+            if (!gasUrl) { syncDiag.push('GAS URL未設定'); return null; }
             // ① fetch（CORS）
             try {
+                syncDiag.push('① fetch試行...');
                 const url = gasUrl + (gasUrl.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
                 const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+                syncDiag.push('fetch応答: HTTP ' + res.status);
                 if (res.ok) {
                     const data = await res.json();
-                    if (data && data.status === 'ok' && Array.isArray(data.listings)) return data;
+                    if (data && data.status === 'ok' && Array.isArray(data.listings)) {
+                        syncDiag.push('fetch成功 (' + data.listings.length + '件)');
+                        return data;
+                    }
+                    syncDiag.push('fetch応答が想定外: ' + JSON.stringify(data).slice(0, 80));
                 }
             } catch (e) {
-                console.warn('fetch失敗、JSONPにフォールバックします:', e);
+                syncDiag.push('fetch例外: ' + (e && e.message ? e.message : e));
             }
             // ② JSONP フォールバック
-            return fetchSheetListingsJsonp();
+            syncDiag.push('② JSONP試行...');
+            const jp = await fetchSheetListingsJsonp();
+            if (jp && jp.status === 'ok' && Array.isArray(jp.listings)) {
+                syncDiag.push('JSONP成功 (' + jp.listings.length + '件)');
+            } else {
+                syncDiag.push('JSONP失敗: ' + (jp ? JSON.stringify(jp).slice(0, 80) : 'null（タイムアウトorブロック）'));
+            }
+            return jp;
         }
 
         function fetchSheetListingsJsonp() {
@@ -1721,11 +1745,12 @@ ${measureLine}
 
         async function syncFromSheet(showFeedback) {
             const btn = document.getElementById('syncBtn');
-            if (btn && showFeedback) { btn.disabled = true; btn.textContent = '🔄 同期中...'; }
+            if (btn) { btn.disabled = true; btn.textContent = '🔄 同期中...'; }
+            setSyncStatus('🔄 読み込み中...（バージョン v5）', 'var(--muted)');
             const data = await fetchSheetListings();
             if (!data || data.status !== 'ok' || !Array.isArray(data.listings)) {
-                if (btn && showFeedback) { btn.disabled = false; btn.textContent = '🔄 更新'; }
-                if (showFeedback) alert('⚠️ スプレッドシートから読み込めませんでした。\nGASの再デプロイ（doGet追加）がお済みか、設定タブのURLが正しいかご確認ください。');
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 更新'; }
+                setSyncStatus('❌ 読み込み失敗（v5）<br>' + syncDiag.join('<br>'), '#d9534f');
                 return false;
             }
             // ローカルに保存している写真サムネは管理番号で引き継ぐ
@@ -1735,6 +1760,7 @@ ${measureLine}
             saveListing();
             renderSalesList();
             if (btn) { btn.disabled = false; btn.textContent = '🔄 更新'; }
+            setSyncStatus('✅ 同期成功（v5）: ' + listings.length + '件を読み込みました<br>' + syncDiag.join(' / '), 'var(--success)');
             return true;
         }
 
