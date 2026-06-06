@@ -1683,20 +1683,18 @@ ${measureLine}
 
         function num(n) { return (n||0).toLocaleString(); }
 
-        // スプレッドシートから全データを読み込む（JSONPでCORS回避）
-        function fetchSheetListings() {
-            return new Promise((resolve) => {
-                if (!gasUrl) { resolve(null); return; }
-                const cb = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-                const script = document.createElement('script');
-                let done = false;
-                const cleanup = () => { try { delete window[cb]; } catch(e){ window[cb] = undefined; } script.remove(); };
-                window[cb] = (data) => { done = true; cleanup(); resolve(data); };
-                script.onerror = () => { if (!done) { cleanup(); resolve(null); } };
-                script.src = gasUrl + (gasUrl.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cb + '&t=' + Date.now();
-                document.body.appendChild(script);
-                setTimeout(() => { if (!done) { cleanup(); resolve(null); } }, 15000);
-            });
+        // スプレッドシートから全データを読み込む（fetch / CORS対応）
+        async function fetchSheetListings() {
+            if (!gasUrl) return null;
+            try {
+                const url = gasUrl + (gasUrl.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
+                const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+                if (!res.ok) return null;
+                return await res.json();
+            } catch (e) {
+                console.warn('シート読み込み失敗:', e);
+                return null;
+            }
         }
 
         async function syncFromSheet(showFeedback) {
