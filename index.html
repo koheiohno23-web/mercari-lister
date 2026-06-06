@@ -1683,18 +1683,40 @@ ${measureLine}
 
         function num(n) { return (n||0).toLocaleString(); }
 
-        // スプレッドシートから全データを読み込む（fetch / CORS対応）
+        // スプレッドシートから全データを読み込む
+        // まず fetch（PC/Chrome向け・高速）、ダメなら JSONP（Safari向けフォールバック）を試す
         async function fetchSheetListings() {
             if (!gasUrl) return null;
+            // ① fetch（CORS）
             try {
                 const url = gasUrl + (gasUrl.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now();
                 const res = await fetch(url, { method: 'GET', redirect: 'follow' });
-                if (!res.ok) return null;
-                return await res.json();
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.status === 'ok' && Array.isArray(data.listings)) return data;
+                }
             } catch (e) {
-                console.warn('シート読み込み失敗:', e);
-                return null;
+                console.warn('fetch失敗、JSONPにフォールバックします:', e);
             }
+            // ② JSONP フォールバック
+            return fetchSheetListingsJsonp();
+        }
+
+        function fetchSheetListingsJsonp() {
+            return new Promise((resolve) => {
+                const cb = 'jsonp_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                const script = document.createElement('script');
+                let done = false;
+                const cleanup = () => {
+                    try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+                    if (script.parentNode) script.remove();
+                };
+                window[cb] = (data) => { done = true; cleanup(); resolve(data); };
+                script.onerror = () => { if (!done) { cleanup(); resolve(null); } };
+                script.src = gasUrl + (gasUrl.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cb + '&t=' + Date.now();
+                document.body.appendChild(script);
+                setTimeout(() => { if (!done) { cleanup(); resolve(null); } }, 15000);
+            });
         }
 
         async function syncFromSheet(showFeedback) {
